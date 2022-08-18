@@ -1,0 +1,22 @@
+diff --git a/drivers/bluetooth/hci/ipm_stm32wb.c b/drivers/bluetooth/hci/ipm_stm32wb.c
+index c21de8d90e..9e5bd9cbf6 100644
+--- a/drivers/bluetooth/hci/ipm_stm32wb.c
++++ b/drivers/bluetooth/hci/ipm_stm32wb.c
+@@ -100,7 +100,16 @@ static void stm32wb_start_ble(void)
+ 	    CFG_BLE_HSE_STARTUP_TIME,
+ 	    CFG_BLE_VITERBI_MODE,
+ 	    CFG_BLE_OPTIONS,
+-	    0 }
++	   	0,
++		CFG_BLE_MAX_COC_INITIATOR_NBR,
++     	CFG_BLE_MIN_TX_POWER,
++    	CFG_BLE_MAX_TX_POWER,
++    	CFG_BLE_RX_MODEL_CONFIG,
++     	CFG_BLE_MAX_ADV_SET_NBR,
++     	CFG_BLE_MAX_ADV_DATA_LEN,
++     	CFG_BLE_TX_PATH_COMPENS,
++     	CFG_BLE_RX_PATH_COMPENS
++		}
+ 	};
+ 
+ 	/**

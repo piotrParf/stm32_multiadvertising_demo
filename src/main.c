@@ -6,16 +6,16 @@
 
 #include <zephyr/types.h>
 #include <stddef.h>
-#include <sys/printk.h>
-#include <sys/util.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/hci.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/hci.h>
 #include <host/id.h>
 #include <host/hci_core.h>
-#include <sys/byteorder.h>
+#include <zephyr/sys/byteorder.h>
 
 #ifndef IBEACON_RSSI
 #define IBEACON_RSSI 0xc8
@@ -79,6 +79,10 @@ static bt_addr_t pubBtAddr={.val={0x5a,0xa5,0xbe,0x2e,0x01,0x00}};
 static bt_addr_le_t iBeacon_adr={ 
 								  .type=BT_ADDR_LE_RANDOM,
 								  .a.val={0xcc,0xbb,0xaa,0x23,0x01,0x00}};
+
+static bt_addr_le_t iBeacon_adr2={ 
+								  .type=BT_ADDR_LE_RANDOM,
+								  .a.val={0xcc,0xbb,0xaa,0x23,0x02,0x00}};
 
 
 struct k_timer my_timer;
@@ -146,7 +150,7 @@ static void set_ble_public_address(bt_addr_t *addr){
 	}
 
 	bt_addr_to_str(addr,addr_s,sizeof(addr_s));
-	LOG_INF("Set public address to %s\n",log_strdup(addr_s));
+	LOG_INF("Set public address to %s\n",addr_s);
 
 	bt_setup_public_id_addr();
 
@@ -163,7 +167,7 @@ void function_to_update_ble_ad(void){
 		//update_params_legacy(adv_param_array[beacon_cnt]);
 
 		if (err) {
-			LOG_ERR("Bluetooth update failed (err %d)", err);
+			LOG_ERR("Bluetooth update failed (err %x)", err);
 		}
 		else{
 			LOG_INF("Bluetooth updated");
@@ -213,7 +217,7 @@ static int ble_read_num_adv_sets(int *numsets)
 	if (err) {
 		uint8_t status = ((struct bt_hci_rp_le_read_num_adv_sets *)rsp->data)->status;
 		LOG_ERR("ACI tone stop error: %d (status 0x%02x)", err, status);
-		return;
+		return err;
 	}
 
 	rp = (struct bt_hci_rp_le_read_num_adv_sets *)rsp->data;
@@ -221,52 +225,12 @@ static int ble_read_num_adv_sets(int *numsets)
 	*numsets = rp->num_sets;
 
 	net_buf_unref(rsp);
-}
-
-/* STM32 ACI command to start advertising utilising GAP commands for full stack*/
-
-#define STM32_ACI_GAP_ADV_SET_ENABLE 0xFCC1
-
-static int aci_gap_le_adv_set_enable(struct bt_le_ext_adv *adv1,
-			 bool enable,
-			 const struct bt_le_ext_adv_start_param *param1)
-{
-	struct net_buf *buf;
-	struct bt_hci_cmd_state_set state;
-	int err;
-
-	/* 2 constant bytes, 4 bytes per adv set*/
-	/* aci gap command 0xfcc1*/
-	buf = bt_hci_cmd_create(STM32_ACI_GAP_ADV_SET_ENABLE, 6);
-	if (!buf) {
-		return -ENOBUFS;
-	}
-
-	if (enable) {
-		net_buf_add_u8(buf, BT_HCI_LE_ADV_ENABLE);
-	} else {
-		net_buf_add_u8(buf, BT_HCI_LE_ADV_DISABLE);
-	}
-
-	/*1 set to enable*/
-	net_buf_add_u8(buf, 1);
-
-	/*first set*/
-	net_buf_add_u8(buf, adv1->handle);
-	net_buf_add_le16(buf, param1 ? sys_cpu_to_le16(param1->timeout) : 0);
-	net_buf_add_u8(buf, param1 ? param1->num_events : 0);
-	bt_hci_cmd_state_set_init(buf, &state, adv1->flags, BT_ADV_ENABLED, enable);
-
-	err = bt_hci_cmd_send_sync(STM32_ACI_GAP_ADV_SET_ENABLE, buf, NULL);
-	if (err) {
-		return err;
-	}
 
 	return 0;
 }
 
 
-/* Mockup to start simultaneously two advertisings in extended mode */
+/* Mockup to start simultaneously two advertisings in extended mode - this is not supported yet in zephyr*/
 static int bt_le_adv_set_enable_two(struct bt_le_ext_adv *adv1,
 			 struct bt_le_ext_adv *adv2,
 			 bool enable,
@@ -321,7 +285,7 @@ static void bt_ready(int err)
 	int id=0;
 
 	if (err) {
-		LOG_ERR("Bluetooth init failed (err %d)", err);
+		LOG_ERR("Bluetooth init failed (err %x)", err);
 		return;
 	}
 
@@ -331,31 +295,31 @@ static void bt_ready(int err)
 
 	/* Set adress as static */
 	BT_ADDR_SET_STATIC((&iBeacon_adr.a)); 
+	BT_ADDR_SET_STATIC((&iBeacon_adr2.a)); 
 	set_ble_public_address(&pubBtAddr);
 
 	LOG_INF("Bluetooth initialized");
-
-	//adv_param_array[0]=&adv_param1;
-	//adv_param_array[1]=&adv_param2;
+	id = bt_id_create(&iBeacon_adr, NULL);
 
 	/* Set param id 1 to Default public address */
 	adv_param1.sid = 0;
-	adv_param1.id=BT_ID_DEFAULT;
+	//adv_param1.id=BT_ID_DEFAULT;
+	adv_param1.id=id;
 
 	/* Set param id 2 to Ibeacon  address */
-	id = bt_id_create(&iBeacon_adr, NULL);
+	id = bt_id_create(&iBeacon_adr2, NULL);
 	adv_param2.sid = 1;
 	adv_param2.id=id;
 
 	err = bt_le_ext_adv_create(&adv_param1, &adv_callbacks, &adv_set1);
 	if (err) {
-		LOG_ERR("failed (err %d)\n", err);
+		LOG_ERR("failed (err %x)\n", err);
 		return;
 	}
 
 	err = bt_le_ext_adv_create(&adv_param2, &adv_callbacks, &adv_set2);
 	if (err) {
-		LOG_ERR("failed (err %d)\n", err);
+		LOG_ERR("failed (err %x)\n", err);
 		return;
 	}
 
@@ -363,47 +327,30 @@ static void bt_ready(int err)
 	err = bt_le_ext_adv_set_data(adv_set1, adv_array[0], adv_lengths[0], NULL,
 				     0);
 	if (err) {
-		LOG_ERR("failed (err %d)\n", err);
+		LOG_ERR("failed (err %x)\n", err);
 		return;
 	}  
 
 	err = bt_le_ext_adv_set_data(adv_set2, adv_array[1], adv_lengths[1], NULL,
 				     0);
 	if (err) {
-		LOG_ERR("failed (err %d)\n", err);
+		LOG_ERR("failed (err %x)\n", err);
 		return;
 	}  
 
-	//err = bt_le_ext_adv_start(adv_set2, &ext_adv_start_param);
-	//err = bt_le_ext_adv_start(adv_set2, &ext_adv_start_param_timeout);
-	//ext_adv_start_param_one_event
-	//err = bt_le_ext_adv_start(adv_set1, &ext_adv_start_param);
-	//err = bt_le_adv_set_enable_two(adv_set1,adv_set2,true,&ext_adv_start_param,&ext_adv_start_param);
-
-	/*Setting by ACI_GAP*/
-	err=aci_gap_le_adv_set_enable(adv_set1,true, &ext_adv_start_param);
-	err=aci_gap_le_adv_set_enable(adv_set2,true, &ext_adv_start_param);
+	err = bt_le_ext_adv_start(adv_set2, &ext_adv_start_param);
 	if (err) {
-		LOG_ERR("failed (err %d)\n", err);
+		LOG_ERR("failed 1 adv set start (err %x)\n", err);
+		return;
+	}
+	err = bt_le_ext_adv_start(adv_set2, &ext_adv_start_param);
+
+	if (err) {
+		LOG_ERR("failed 2 adv set start (err %x)\n", err);
 		return;
 	}
 
-	//err = bt_le_ext_adv_start(adv_set2, &ext_adv_start_param);
-	//if (err) {
-	//		LOG_ERR("failed (err %d)\n", err);
-	//		return;
-	//	}
-	//bt_le_adv_start
 	LOG_INF("Extended advertising enable...");
-
-    /* Start advertising */
-	//err = bt_le_adv_start(adv_param_array[0], ad, ARRAY_SIZE(ad),
-	//		      NULL, 0);
-
-	//if (err) {
-	//	printk("Advertising failed to start (err %d)\n", err);
-	//	return;
-	//}
 
 	LOG_INF("Beacons started\n");
 
@@ -418,13 +365,13 @@ void main(void)
 	/* Initialize the Bluetooth Subsystem */
 	err = bt_enable(bt_ready);
 	if (err) {
-		LOG_ERR("Bluetooth init failed (err %d)\n", err);
+		LOG_ERR("Bluetooth init failed (err %x)\n", err);
 	}
 
 	while(1){
 		k_timer_status_sync(&my_timer);
 		//function_to_update_ble_ad();
-		LOG_INF("Timer tick\n");
+		//LOG_INF("Timer tick");
 	}
 	
 }

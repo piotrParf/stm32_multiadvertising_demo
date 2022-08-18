@@ -5,39 +5,20 @@ Bluetooth: iBeacon
 
 Overview
 ********
-
-This simple application demonstrates the BLE Broadcaster role
-functionality by advertising an Apple iBeacon. The calibrated RSSI @ 1
-meter distance can be set using an IBEACON_RSSI build variable
-(e.g. IBEACON_RSSI=0xb8 for -72 dBm RSSI @ 1 meter), or by manually
-editing the default value in the ``main.c`` file.
-
-Because of the hard-coded values of iBeacon UUID, major, and minor,
-the application is not suitable for production use, but is quite
-convenient for quick demonstrations of iBeacon functionality.
+Based on iBeacon zephyr demo to demonstrate two beacons advertised simultaneously
 
 Requirements
 ************
 
-* A board with Bluetooth LE support, or
-* QEMU with BlueZ running on the host
+tried on booth
 
-Building and Running
+* stm32wb55 nucleo
+* nrf5340dk - does not run changing of public adress
+
+TIPS 
 ********************
+For STM32wb55 there is need to turn on extended advertising in config options and install extended adv firmware into stm32wb55.
 
-This sample can be found under :zephyr_file:`samples/bluetooth/ibeacon` in the
-Zephyr tree.
+use hal_stm32_fork with commits making compatible with stm32 cube 1.14(https://github.com/zephyrproject-rtos/hal_stm32/pull/146). Also apply patches hal_stm32_update_ext.diff to hal_stm32 module of zephyr
+and main_ext_zephyr.diff to zephyr main (3217d97)
 
-See :ref:`bluetooth samples section <bluetooth-samples>` for details on how
-to run the sample inside QEMU.
-
-For other boards, build and flash the application as follows:
-
-.. zephyr-app-commands::
-   :zephyr-app: samples/bluetooth/ibeacon
-   :board: <board>
-   :goals: flash
-   :compact:
-
-Refer to your :ref:`board's documentation <boards>` for alternative
-flash instructions if your board doesn't support the ``flash`` target.

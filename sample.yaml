@@ -1,8 +1,4 @@
 sample:
-  description: Sample code for Zephyr iBeacon Demo
-  name: iBeacon
-tests:
-  sample.bluetooth.ibeacon:
-    harness: bluetooth
-    platform_allow: bbc_microbit qemu_x86
-    tags: bluetooth
+  description: Sample code for Zephyr iBeacon Demo with extended advertising
+  name: iBeacon demo two beacons
+
