@@ -1,0 +1,7 @@
+{
+    "restructuredtext.confPath": "",
+    "cmake.configureArgs": [
+        "-DBOARD=jupiter_nrf5340_cpuapp",
+        "-DNO_BUILD_TYPE_WARNING=TRUE",
+    ],
+}

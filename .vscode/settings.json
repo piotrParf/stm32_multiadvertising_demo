@@ -1,0 +1,7 @@
+{
+    "restructuredtext.confPath": "",
+    "cmake.configureArgs": [
+        "-DBOARD=nucleo_wb55rg",
+        "-DNO_BUILD_TYPE_WARNING=TRUE",
+    ],
+}
